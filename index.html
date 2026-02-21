@@ -1,110 +1,431 @@
 <!DOCTYPE html>
 <html lang="az">
 <head>
-    <!-- TensorFlow.js və MediaPipe yüklə - ALTERNATİV LİNKLƏR -->
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.18.0/dist/tf.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469241/hands.js"></script>
-<!-- Əgər yenə işləmirsə, bu versiyaları yoxlayın -->
-<script src="https://unpkg.com/@tensorflow/tfjs@3.18.0/dist/tf.min.js"></script>
-<script src="https://unpkg.com/@mediapipe/hands/hands.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Əl İzləmə Virtual Klaviaturası</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Sadə Əl İzləmə</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #1a1a2e;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            font-size: 2.5rem;
+        }
+
+        .camera-box {
+            background: #16213e;
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .video-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 640px;
+            margin: 0 auto;
+            border-radius: 15px;
+            overflow: hidden;
+            background: #0f0f1f;
+        }
+
+        #video, #canvas {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        #canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            background: #0f3460;
+            color: white;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn:hover {
+            background: #533483;
+            transform: translateY(-2px);
+        }
+
+        .btn.success {
+            background: #28a745;
+        }
+
+        .btn.danger {
+            background: #dc3545;
+        }
+
+        .status {
+            text-align: center;
+            margin-top: 20px;
+            padding: 15px;
+            background: #16213e;
+            border-radius: 10px;
+            color: #fff;
+        }
+
+        #status-text {
+            color: #ffd700;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        .info {
+            margin-top: 20px;
+            padding: 15px;
+            background: #16213e;
+            border-radius: 10px;
+            color: #fff;
+        }
+
+        .info h3 {
+            color: #ffd700;
+            margin-bottom: 10px;
+        }
+
+        .info ul {
+            list-style: none;
+        }
+
+        .info li {
+            margin: 8px 0;
+            color: #aaa;
+        }
+
+        .info li::before {
+            content: "✓ ";
+            color: #28a745;
+            font-weight: bold;
+            margin-right: 5px;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>🖐️ Əl İzləmə Virtual Klaviaturası</h1>
-            <p>Əlinizi kameraya tutun və virtual klaviaturada yazın</p>
-        </div>
-
-        <div class="main-content">
-            <div class="camera-section">
-                <div class="video-container">
-                    <video id="video" playsinline></video>
-                    <canvas id="canvas"></canvas>
-                </div>
-                <div class="camera-controls">
-                    <button class="btn" onclick="startHandTracking()">▶️ Başla</button>
-                    <button class="btn danger" onclick="stopHandTracking()">⏹️ Dayandır</button>
-                    <button class="btn" onclick="toggleFingerPoints()">👆 Barmaqları göstər</button>
-                </div>
+        <h1>🖐️ Sadə Əl İzləmə</h1>
+        
+        <div class="camera-box">
+            <div class="video-wrapper">
+                <video id="video" autoplay playsinline></video>
+                <canvas id="canvas"></canvas>
+            </div>
+            
+            <div class="controls">
+                <button class="btn success" onclick="startCamera()">📷 Kameranı Başlat</button>
+                <button class="btn danger" onclick="stopCamera()">⏹️ Kameranı Dayandır</button>
+                <button class="btn" onclick="captureImage()">📸 Şəkil Çək</button>
             </div>
 
-            <div class="keyboard-section">
-                <div class="output-window">
-                    <textarea id="output" placeholder="Yazdıqlarınız burada görünəcək..." readonly></textarea>
-                    <button class="clear-btn" onclick="clearOutput()">🗑️</button>
-                </div>
-
-                <div class="virtual-keyboard" id="keyboard"></div>
-
-                <div class="status-panel">
-                    <div class="status-header">
-                        <span>📊 Canlı Status</span>
-                        <span class="live-badge">LIVE</span>
-                    </div>
-                    
-                    <div class="status-grid">
-                        <div class="status-item">
-                            <span class="status-label">👆 Barmaq izləmə:</span>
-                            <span class="status-value" id="trackingStatus">Gözləyir...</span>
-                        </div>
-                        <div class="status-item">
-                            <span class="status-label">🖐️ Əl pozisiyası:</span>
-                            <span class="status-value" id="handPosition">-</span>
-                        </div>
-                        <div class="status-item">
-                            <span class="status-label">👆 Aktiv barmaq:</span>
-                            <span class="status-value" id="activeFinger">-</span>
-                        </div>
-                        <div class="status-item">
-                            <span class="status-label">📍 Koordinatlar:</span>
-                            <span class="status-value coordinate-info" id="coordinates">x: 0, y: 0</span>
-                        </div>
-                    </div>
-
-                    <div class="finger-indicator">
-                        <div class="finger-label">Barmaqlar:</div>
-                        <div class="finger-dots" id="fingerIndicator">
-                            <div class="finger-dot" title="Baş barmaq"></div>
-                            <div class="finger-dot" title="İşarə barmağı"></div>
-                            <div class="finger-dot" title="Orta barmaq"></div>
-                            <div class="finger-dot" title="Üzük barmağı"></div>
-                            <div class="finger-dot" title="Çeçələ barmaq"></div>
-                        </div>
-                    </div>
-                </div>
+            <div class="status">
+                <p>Status: <span id="status-text">Kamera gözləyir</span></p>
+                <p id="camera-info"></p>
             </div>
-        </div>
 
-        <div class="instructions">
-            <h3>📋 İstifadə qaydaları:</h3>
-            <div class="steps">
-                <div class="step">
-                    <div class="step-number">1</div>
-                    <div class="step-text">"Başla" düyməsinə klikləyin və kameraya icazə verin</div>
-                </div>
-                <div class="step">
-                    <div class="step-number">2</div>
-                    <div class="step-text">Əlinizi kameraya doğru tutun (əliniz tam görünməlidir)</div>
-                </div>
-                <div class="step">
-                    <div class="step-number">3</div>
-                    <div class="step-text">İşarə barmağınızla klaviatura düymələrini seçin</div>
-                </div>
-                <div class="step">
-                    <div class="step-number">4</div>
-                    <div class="step-text">Baş barmağınızı hərəkət etdirərək düyməyə basın</div>
-                </div>
+            <div class="info">
+                <h3>📋 İstifadə qaydaları:</h3>
+                <ul>
+                    <li>"Kameranı Başlat" düyməsinə klikləyin</li>
+                    <li>Brauzer icazə istəyəcək - "İcazə ver" seçin</li>
+                    <li>Kamera açılacaq və ekranda görünəcəksiniz</li>
+                    <li>Əlinizi kameraya göstərin</li>
+                    <li>Qırmızı nöqtələr barmaqlarınızı izləyəcək</li>
+                </ul>
             </div>
         </div>
     </div>
 
-    <!-- TensorFlow.js və MediaPipe yüklə -->
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4"></script>
-    <script src="script.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.18.0/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469241/hands.js"></script>
+    
+    <script>
+        // Elementləri seç
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const statusText = document.getElementById('status-text');
+        const cameraInfo = document.getElementById('camera-info');
+
+        // Dəyişənlər
+        let hands = null;
+        let isCameraActive = false;
+        let animationFrame = null;
+
+        // ========== KAMERANI BAŞLAT ==========
+        async function startCamera() {
+            try {
+                statusText.textContent = 'Kamera başladılır...';
+                
+                // Kamera stream-i al
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: {
+                        width: { ideal: 640 },
+                        height: { ideal: 480 },
+                        facingMode: 'user'
+                    } 
+                });
+                
+                // Video elementinə təyin et
+                video.srcObject = stream;
+                
+                // Video hazır olduqda
+                video.onloadedmetadata = () => {
+                    video.play();
+                    
+                    // Canvas ölçülərini təyin et
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    
+                    statusText.textContent = 'Kamera aktivdir';
+                    cameraInfo.textContent = Ölçü: ${video.videoWidth} x ${video.videoHeight};
+                    
+                    // Hand Tracking qur
+                    setupHandTracking();
+                    
+                    // Animasiyaya başla
+                    startProcessing();
+                };
+                
+            } catch (error) {
+                console.error('Kamera xətası:', error);
+                
+                if (error.name === 'NotAllowedError') {
+                    statusText.textContent = 'Xəta: Kamera icazəsi verilmədi!';
+                    alert('Kamera icazəsi verilmədi! Brauzerin ünvan çubuğundakı kamera ikonasından icazə verin.');
+                } else if (error.name === 'NotFoundError') {
+                    statusText.textContent = 'Xəta: Kamera tapılmadı!';
+                    alert('Kamera tapılmadı! Zəhmət olmasa kameranızı qoşun.');
+                } else {
+                    statusText.textContent = 'Xəta: ' + error.message;
+                    alert('Kamera xətası: ' + error.message);
+                }
+            }
+        }
+
+        // ========== HAND TRACKING QUR ==========
+        function setupHandTracking() {
+            try {
+                hands = new Hands({
+                    locateFile: (file) => {
+                        return https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469241/${file};
+                    }
+                });
+
+                hands.setOptions({
+                    maxNumHands: 1,
+                    modelComplexity: 0,  // Daha sürətli üçün 0
+                    minDetectionConfidence: 0.5,
+                    minTrackingConfidence: 0.5
+                });
+
+                hands.onResults(onHandResults);
+                
+                statusText.textContent = 'Hand Tracking aktiv';
+                
+            } catch (error) {
+                console.error('Hand Tracking xətası:', error);
+                statusText.textContent = 'Hand Tracking qurula bilmədi';
+            }
+        }
+
+        // ========== FRAME-LƏRİ İŞLƏ ==========
+        function startProcessing() {
+            if (!isCameraActive) {
+                isCameraActive = true;
+                processFrame();
+            }
+        }
+
+        async function processFrame() {
+            if (!isCameraActive || !hands || !video.videoWidth) {
+                return;
+            }
+            
+            try {
+                await hands.send({ image: video });
+            } catch (error) {
+                console.error('Frame işləmə xətası:', error);
+            }
+            
+            // Növbəti frame
+            animationFrame = requestAnimationFrame(processFrame);
+        }
+
+        // ========== HAND TRACKING NƏTİCƏLƏRİ ==========
+        function onHandResults(results) {
+            // Canvas-ı təmizlə
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Videonu canvas-a çək (aynalama üçün)
+            ctx.save();
+            ctx.scale(-1, 1);
+            ctx.translate(-canvas.width, 0);
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            ctx.restore();
+            
+            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                // Əl tapıldı
+                ctx.fillStyle = 'white';
+                ctx.font = '20px Arial';
+                ctx.fillText('👆 Əl tapıldı!', 20, 40);
+                
+                // Əl nöqtələrini çək
+                drawHandLandmarks(results.multiHandLandmarks[0]);
+            } else {
+                // Əl tapılmadı
+                ctx.fillStyle = 'white';
+                ctx.font = '20px Arial';
+                ctx.fillText('✋ Əlinizi göstərin', 20, 40);
+            }
+        }
+
+        // ========== ƏL NÖQTƏLƏRİNİ ÇƏK ==========
+        function drawHandLandmarks(landmarks) {
+            if (!landmarks) return;
+            
+            // Bağlantıları çək
+            ctx.save();
+            ctx.scale(-1, 1);
+            ctx.translate(-canvas.width, 0);
+            
+            // Bağlantılar
+            ctx.strokeStyle = '#00ff00';
+            ctx.lineWidth = 3;
+            
+            const connections = [
+                [0, 1], [1, 2], [2, 3], [3, 4],  // Baş barmaq
+                [0, 5], [5, 6], [6, 7], [7, 8],  // İşarə barmağı
+                [0, 9], [9, 10], [10, 11], [11, 12],  // Orta barmaq
+                [0, 13], [13, 14], [14, 15], [15, 16],  // Üzük barmaq
+                [0, 17], [17, 18], [18, 19], [19, 20],  // Çeçələ
+                [0, 5], [5, 9], [9, 13], [13, 17]  // Ovuc
+            ];
+            
+            ctx.beginPath();
+            connections.forEach(conn => {
+                const start = landmarks[conn[0]];
+                const end = landmarks[conn[1]];
+                
+                if (start && end) {
+                    ctx.moveTo(start.x * canvas.width, start.y * canvas.height);
+                    ctx.lineTo(end.x * canvas.width, end.y * canvas.height);
+                }
+            });
+            ctx.stroke();
+            
+            // Nöqtələri çək
+            landmarks.forEach((point, index) => {
+                const x = point.x * canvas.width;
+                const y = point.y * canvas.height;
+                
+                ctx.beginPath();
+                ctx.arc(x, y, 8, 0, 2 * Math.PI);
+                
+                // Barmaq ucları qırmızı
+                if ([4, 8, 12, 16, 20].includes(index)) {
+                    ctx.fillStyle = '#ff0000';
+                    ctx.shadowColor = '#ff0000';
+                } else {
+                    ctx.fillStyle = '#00ff00';
+                    ctx.shadowColor = '#00ff00';
+                }
+                
+                ctx.shadowBlur = 10;
+                ctx.fill();
+            });
+            
+            ctx.restore();
+        }
+
+        // ========== KAMERANI DAYANDIR ==========
+        function stopCamera() {
+            isCameraActive = false;
+            
+            if (animationFrame) {
+                cancelAnimationFrame(animationFrame);
+                animationFrame = null;
+            }
+            
+            if (video.srcObject) {
+                const tracks = video.srcObject.getTracks();
+                tracks.forEach(track => track.stop());
+                video.srcObject = null;
+            }
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            statusText.textContent = 'Kamera dayandı';
+            cameraInfo.textContent = '';
+        }
+
+        // ========== ŞƏKİL ÇƏK ==========
+        function captureImage() {
+            if (!video.srcObject) {
+                alert('Kamera aktiv deyil!');
+                return;
+            }
+            
+            // Canvas-da şəkli çək
+            const captureCanvas = document.createElement('canvas');
+            captureCanvas.width = video.videoWidth;
+            captureCanvas.height = video.videoHeight;
+            const captureCtx = captureCanvas.getContext('2d');
+            
+            // Aynalama ilə çək
+            captureCtx.save();
+            captureCtx.scale(-1, 1);
+            captureCtx.translate(-captureCanvas.width, 0);
+            captureCtx.drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height);
+            captureCtx.restore();
+            
+            // Yüklə
+            const link = document.createElement('a');
+            link.download = sekil-${Date.now()}.png;
+            link.href = captureCanvas.toDataURL();
+            link.click();
+        }
+
+        // Səhifə bağlananda kameranı dayandır
+        window.addEventListener('beforeunload', stopCamera);
+    </script>
 </body>
 </html>
