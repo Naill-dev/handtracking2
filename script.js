@@ -350,3 +350,15 @@ window.startHandTracking = startHandTracking;
 window.stopHandTracking = stopHandTracking;
 window.toggleFingerPoints = toggleFingerPoints;
 window.clearOutput = clearOutput;
+
+async function startHandTracking() {
+    try {
+        await initHandTracking();
+        await camera.start();           // ← burdan xəta gəlirsə
+        isTracking = true;
+        ...
+    } catch (error) {
+        console.error('Kamera xətası:', error);
+        alert('Kameraya giriş icazəsi verilmədi! ...');
+    }
+}
