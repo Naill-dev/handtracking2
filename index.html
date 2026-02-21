@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Əl İzləmə Virtual Klaviaturası</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🖐️ Əl İzləmə Virtual Klaviaturası</h1>
+            <p>Əlinizi kameraya tutun və virtual klaviaturada yazın</p>
+        </div>
+
+        <div class="main-content">
+            <div class="camera-section">
+                <div class="video-container">
+                    <video id="video" playsinline></video>
+                    <canvas id="canvas"></canvas>
+                </div>
+                <div class="camera-controls">
+                    <button class="btn" onclick="startHandTracking()">▶️ Başla</button>
+                    <button class="btn danger" onclick="stopHandTracking()">⏹️ Dayandır</button>
+                    <button class="btn" onclick="toggleFingerPoints()">👆 Barmaqları göstər</button>
+                </div>
+            </div>
+
+            <div class="keyboard-section">
+                <div class="output-window">
+                    <textarea id="output" placeholder="Yazdıqlarınız burada görünəcək..." readonly></textarea>
+                    <button class="clear-btn" onclick="clearOutput()">🗑️</button>
+                </div>
+
+                <div class="virtual-keyboard" id="keyboard"></div>
+
+                <div class="status-panel">
+                    <div class="status-header">
+                        <span>📊 Canlı Status</span>
+                        <span class="live-badge">LIVE</span>
+                    </div>
+                    
+                    <div class="status-grid">
+                        <div class="status-item">
+                            <span class="status-label">👆 Barmaq izləmə:</span>
+                            <span class="status-value" id="trackingStatus">Gözləyir...</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">🖐️ Əl pozisiyası:</span>
+                            <span class="status-value" id="handPosition">-</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">👆 Aktiv barmaq:</span>
+                            <span class="status-value" id="activeFinger">-</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">📍 Koordinatlar:</span>
+                            <span class="status-value coordinate-info" id="coordinates">x: 0, y: 0</span>
+                        </div>
+                    </div>
+
+                    <div class="finger-indicator">
+                        <div class="finger-label">Barmaqlar:</div>
+                        <div class="finger-dots" id="fingerIndicator">
+                            <div class="finger-dot" title="Baş barmaq"></div>
+                            <div class="finger-dot" title="İşarə barmağı"></div>
+                            <div class="finger-dot" title="Orta barmaq"></div>
+                            <div class="finger-dot" title="Üzük barmağı"></div>
+                            <div class="finger-dot" title="Çeçələ barmaq"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="instructions">
+            <h3>📋 İstifadə qaydaları:</h3>
+            <div class="steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <div class="step-text">"Başla" düyməsinə klikləyin və kameraya icazə verin</div>
+                </div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <div class="step-text">Əlinizi kameraya doğru tutun (əliniz tam görünməlidir)</div>
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <div class="step-text">İşarə barmağınızla klaviatura düymələrini seçin</div>
+                </div>
+                <div class="step">
+                    <div class="step-number">4</div>
+                    <div class="step-text">Baş barmağınızı hərəkət etdirərək düyməyə basın</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TensorFlow.js və MediaPipe yüklə -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4"></script>
+    <script src="script.js"></script>
+</body>
+</html>
